@@ -22,7 +22,7 @@ namespace ProcessMonitor
         /// <param name="pollingFrequencyInMinutes">The interval between monitoring operations.</param>
         /// <param name="cancellationToken"/>
         /// <returns>Process monitoring Task</returns>
-        public async Task MonitorProcessAsync(string processName, int maxLifetimeInMinutes, int pollingFrequencyInMinutes, CancellationToken cancellationToken)
+        public async Task MonitorProcessAsync(string processName, double maxLifetimeInMinutes, double pollingFrequencyInMinutes, CancellationToken cancellationToken)
         {
             try
             {
@@ -58,9 +58,9 @@ namespace ProcessMonitor
         /// </summary>
         /// <param name="maxLifetimeInMinutes"/>
         /// <param name="process"/>
-        private void HandleProcessExit(int maxLifetimeInMinutes, Process process)
+        private void HandleProcessExit(double maxLifetimeInMinutes, Process process)
         {
-            if ((DateTime.Now - process.StartTime).TotalSeconds > maxLifetimeInMinutes)
+            if ((DateTime.Now - process.StartTime).TotalMinutes > maxLifetimeInMinutes)
             {
                 try
                 {

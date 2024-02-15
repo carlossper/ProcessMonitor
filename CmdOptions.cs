@@ -8,9 +8,26 @@ namespace ProcessMonitor
         public string ProcessName { get; set; }
 
         [Value(1, Required = true, HelpText = "Maximum lifetime PrcessName in minutes.")]
-        public int MaxLifetime { get; set; }
+        public double MaxLifetime { get; set; }
 
         [Value(2, Required = true, HelpText = "Monitoring frequency in minutes.")]
-        public int MonitoringFrequency { get; set; }
+        public double MonitoringFrequency { get; set; }
+
+        public bool ValidateOptions()
+        {
+            if (MaxLifetime < 0)
+            {
+                Console.WriteLine("Error: MaxLifetime must be a non-negative value.");
+                return false;
+            }
+
+            if (MonitoringFrequency < 0)
+            {
+                Console.WriteLine("Error: MonitoringFrequency must be a non-negative value.");
+                return false;
+            }
+
+            return true;
+        }
     }
 }

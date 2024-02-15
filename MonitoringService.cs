@@ -1,15 +1,14 @@
 ﻿using NLog;
-using System;
 using System.ComponentModel;
 using System.Diagnostics;
 
 namespace ProcessMonitor
 {
-    public class Monitor
+    public class MonitoringService
     {
         private readonly ILogger logger;
 
-        public Monitor(ILogger logger)
+        public MonitoringService(ILogger logger)
         {
             this.logger = logger;
         }
@@ -21,46 +20,45 @@ namespace ProcessMonitor
         /// <param name="processName"/>
         /// <param name="maxLifetimeInMinutes"/>
         /// <param name="pollingFrequencyInMinutes">The interval between monitoring operations.</param>
-        public void MonitorProcessSync(string processName, int maxLifetimeInMinutes, int pollingFrequencyInMinutes)
+        /// <param name="cancellationToken"/>
+        /// <returns>Process monitoring Task</returns>
+        public async Task MonitorProcessAsync(string processName, int maxLifetimeInMinutes, int pollingFrequencyInMinutes, CancellationToken cancellationToken)
         {
-            while (!(Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Q))
+            try
             {
-                // Ensure all polling operations check processes created in the meantime
-                Process[] allProcessesByName = Process.GetProcessesByName(processName);
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    //Ensure all polling operations check processes created in the meantime
+                    Process[] allProcessesByName = Process.GetProcessesByName(processName);
 
-                HandleProcessExit(maxLifetimeInMinutes, allProcessesByName);
+                    foreach (var process in allProcessesByName)
+                    {
+                        if (!process.HasExited)
+                        {
+                            HandleProcessExit(maxLifetimeInMinutes, process);
+                        }
+                        else
+                        {
+                            logger.Info($"PID: {process.Id} has exited before our last polling operation.");
+                        }
+                    }
 
-                // Blocking main thread as we antecipate no interactions for a synchronous version
-                Thread.Sleep(TimeSpan.FromMinutes(pollingFrequencyInMinutes));
+                    //Delay asynchronously to allow cancellation between polling operations
+                    await Task.Delay(TimeSpan.FromMinutes(pollingFrequencyInMinutes), cancellationToken);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                logger.Info("Monitoring task was canceled by pressing 'Q'.");
             }
         }
 
         /// <summary>
-        /// Handles <paramref name="allProcessesByName"/> exits after <paramref name="maxLifetimeInMinutes"/>
-        /// </summary>
-        /// <param name="maxLifetimeInMinutes"/>
-        /// <param name="allProcessesByName"/>
-        private void HandleProcessExit(int maxLifetimeInMinutes, Process[] allProcessesByName)
-        {
-            foreach (var process in allProcessesByName.ToList())
-            {
-                if (!process.HasExited)
-                {
-                    KillProcessOverThreshold(maxLifetimeInMinutes, process);
-                }
-                else
-                {
-                    logger.Info($"PID: {process.Id} has exited before our last polling operation.");
-                }
-            }
-        }
-
-        /// <summary>
-        /// Kills any <paramref name="process"/> that is running for longer than <paramref name="maxLifetimeInMinutes"/>.
+        /// Handles <paramref name="process"/> exit after <paramref name="maxLifetimeInMinutes"/>
         /// </summary>
         /// <param name="maxLifetimeInMinutes"/>
         /// <param name="process"/>
-        private void KillProcessOverThreshold(int maxLifetimeInMinutes, Process process)
+        private void HandleProcessExit(int maxLifetimeInMinutes, Process process)
         {
             if ((DateTime.Now - process.StartTime).TotalSeconds > maxLifetimeInMinutes)
             {

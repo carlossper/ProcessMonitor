@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ProcessMonitor\ProcessMonitorSrc\ProcessMonitorSrc.csproj" />
+    <ProjectReference Include="..\ProcessMonitorSrc\ProcessMonitorSrc.csproj" />
   </ItemGroup>
 
 </Project>
